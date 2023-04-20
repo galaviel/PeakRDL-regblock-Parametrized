@@ -3,6 +3,8 @@
 [![Coverage Status](https://coveralls.io/repos/github/SystemRDL/PeakRDL-regblock/badge.svg?branch=main)](https://coveralls.io/github/SystemRDL/PeakRDL-regblock?branch=main)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/peakrdl-regblock.svg)](https://pypi.org/project/peakrdl-regblock)
 
+For the description of this fork, please see https://github.com/galaviel/systemrdl-compiler-Parametrized/
+
 # PeakRDL-regblock
 Compile SystemRDL into a SystemVerilog control/status register (CSR) block.
 
