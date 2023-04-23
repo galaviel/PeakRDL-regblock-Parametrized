@@ -152,18 +152,15 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
         
         # append local (current) reg -- Scalar
         if self._loop_level == 0 and node.has_sw_readable:
-            print("Reg is not array - setting '1' to self.reg_offset_str " + str(node)) 
             self.reg_offset_str     = "1"   # galaviel if not an array, add 1 ...
         
         #offset_parts.append("1")
         
         if self.reg_offset_str != "":
             self.global_offset_arr.append(self.reg_offset_str)
-        print("Globl Offset before=" + self.global_offset_str)
         if self.global_offset_str != "":
             self.global_offset_str += "+"
         self.global_offset_str += self.reg_offset_str
-        print("Globl Offset after =" + self.global_offset_str)
         
         # galaviel consolidate global offset accomulated thus far
         # if it contains X + X then re-write that more nicely as 2*x
