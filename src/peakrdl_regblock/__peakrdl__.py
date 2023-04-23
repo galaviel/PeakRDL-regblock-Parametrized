@@ -105,6 +105,7 @@ class Exporter(ExporterSubcommandPlugin):
             The 'hier' style uses component's hierarchy as the struct type name. [lexical]
             """
         )
+        
         arg_group.add_argument(
             "--hwif-report",
             action="store_true",
@@ -112,12 +113,31 @@ class Exporter(ExporterSubcommandPlugin):
             help="Generate a HWIF report file"
         )
 
+
         arg_group.add_argument(
             "--addr-width",
             type=int,
             default=None,
             help="""Override the CPU interface's address width. By default,
             address width is sized to the contents of the regblock.
+            """
+        )
+
+        arg_group.add_argument(
+            "--keep-params",
+            type=str,
+            default=False,
+            nargs='*',
+            help="""Limited parametrized output support. Generally all SystemRDL parameters need to be resolved at elaboration time
+            otherwise it's a fatal error.
+            This option allow keeping/preserving unresolved parameters and generating parametrized / symbolic RTL regblock output.
+            Support is currently limited to these cases:
+            1. 1D register array: parameters that set the single dimension of a 1D register array.
+            2. Reset values: parameters that define the reset value of fields.
+            In such cases the output RTL will contain the parameter name (string) rather than some integer actual value for the parameter.
+            
+            Restriction: Note that above expressions that define the array size and reset value, must contain exactly one parameter reference.
+            An expression that involves more than one parameter and/or arithmetic operations (e.g. 3*PARAM_1) is not allowed yet. 
             """
         )
 
@@ -137,4 +157,5 @@ class Exporter(ExporterSubcommandPlugin):
             retime_read_response=options.rt_read_response,
             generate_hwif_report=options.hwif_report,
             address_width=options.addr_width,
+            keep_params=options.keep_params
         )

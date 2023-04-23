@@ -20,12 +20,20 @@ class Readback:
     def get_implementation(self) -> str:
         gen = ReadbackAssignmentGenerator(self.exp)
         array_assignments = gen.get_content(self.top_node)
-        array_size = gen.current_offset
+        
+        # galaviel
+        #array_size = gen.current_offset
+        array_size = gen.global_offset_str
+        array_size_symbolic = gen.array_size_symbolic 
 
         # Enabling the fanin stage doesnt make sense if readback fanin is
         # small. This also avoids pesky corner cases
-        if array_size < 4:
-            self.do_fanin_stage = False
+        # galaviel can't decideon array size if it's symbolic
+        if array_size_symbolic:
+            self.do_fanin_stage = False         # can't decide, better leave it to user discretion (user must explicitely specify via cmdline or config if wants fanin or not)
+        else:
+            if array_size < 4:
+                self.do_fanin_stage = False
 
         context = {
             "array_assignments" : array_assignments,

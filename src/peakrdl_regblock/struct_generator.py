@@ -5,6 +5,7 @@ from collections import OrderedDict
 from systemrdl.walker import RDLListener, RDLWalker
 
 from .identifier_filter import kw_filter as kwf
+from systemrdl.ast.references import ParameterRef  # galaviel
 
 if TYPE_CHECKING:
     from typing import Union
@@ -29,7 +30,9 @@ class _AnonymousStruct(_StructBase):
 
     def __str__(self) -> str:
         if self.array_dimensions:
-            suffix = "[" + "][".join((str(n) for n in self.array_dimensions)) + "]"
+            # galaviel
+            mda =  [n.param.name if isinstance(n, ParameterRef) else str(n) for n in self.array_dimensions]
+            suffix = "[" + "][".join(mda) + "]"     # galaviel
         else:
             suffix = ""
 
@@ -57,7 +60,7 @@ class _TypedefStruct(_StructBase):
     @property
     def instantiation(self) -> str:
         if self.array_dimensions:
-            suffix = "[" + "][".join((str(n) for n in self.array_dimensions)) + "]"
+            suffix = "[" + "][".join((n.param.name if isinstance(n, ParameterRef) else str(n) for n in self.array_dimensions)) + "]"    # galaviel
         else:
             suffix = ""
 
@@ -82,7 +85,15 @@ class StructGenerator:
 
     def add_member(self, name: str, width: int = 1, array_dimensions: Optional[List[int]] = None) -> None:
         if array_dimensions:
-            suffix = "[" + "][".join((str(n) for n in array_dimensions)) + "]"
+            # galaviel
+            mda = []
+            from systemrdl.ast.references import ParameterRef  # galaviel
+            for n in array_dimensions:
+                if isinstance(n, ParameterRef):
+                    mda.append(n.param.name)
+                else:
+                    mda.append(str(n))
+            suffix = "[" + "][".join(mda) + "]"
         else:
             suffix = ""
 

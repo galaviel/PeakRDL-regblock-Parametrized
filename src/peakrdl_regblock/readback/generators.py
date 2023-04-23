@@ -8,9 +8,14 @@ if TYPE_CHECKING:
     from ..exporter import RegblockExporter
 
 class ReadbackLoopBody(LoopBody):
+    """
+    galaviel this just adds the search & replace of each dim size.
+    not sure why we need this - we know the dim's in advance.. not sure why we really need to count anything here.
+    not really needed - I think - since we know #regs per DIM in advance .. don't really understand why we need this
+    """
     def __init__(self, dim: int, iterator: str, i_type: str) -> None:
         super().__init__(dim, iterator, i_type)
-        self.n_regs = 0
+        self.n_regs = 0     
 
     def __str__(self) -> str:
         # replace $i#sz token when stringifying
@@ -30,8 +35,17 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
         # The readback array collects all possible readback values into a flat
         # array. The array width is equal to the CPUIF bus width. Each entry in
         # the array represents an aligned read access.
-        self.current_offset = 0
-        self.start_offset_stack = [] # type: List[int]
+        self.global_offset_str  = ""        # galaviel offset of everything before and not including the current register we're in
+        self.global_offset_arr  = []        # galaviel same as above only components (some int, some str). concat it to get the _str version above
+        
+        self.reg_offset_str     = ""        # e.g dim1*dim2*dim3
+        
+        self.array_size = ""                      # galaviel this is the over-all array size, use it in template..
+        self.array_size_symbolic = False          # True if any of the regs' dim is a parameter
+        
+           
+         
+        self.start_offset_stack = [] # type: List[int]    # galaviel make this either int/str (str in case dim is ParameterRef/string name of the param)
         self.dim_stack = [] # type: List[int]
 
     @property
@@ -53,34 +67,67 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
         size of its contents is known.
         """
         offset_parts = []
-        for i in range(self._loop_level):
-            offset_parts.append(f"i{i}*$i{i}sz")
-        offset_parts.append(str(self.current_offset))
-        return " + ".join(offset_parts)
+        #galaviel
+        if False:
+            for i in range(self._loop_level):
+                offset_parts.append(f"i{i}*$i{i}sz")
+            offset_parts.append(str(self.current_offset))
+        else:
+            
+            # append global
+            if len(self.global_offset_arr) != 0:
+                offset_parts.extend(self.global_offset_arr)
+                
+            # append local (current) reg -- Array
+            if self._loop_level != 0:
+                for i in range(self._loop_level):
+                    if i == 0:
+                        offset_parts.append(f"i{i}"                     )       # galaviel TODO maybe need to reverse self.dim_stack() ? 
+                    else:
+                        offset_parts.append(f"i{i}*" + self.dim_stack[i])
+                
+        # consolidate
+        out_str = self.consolidate_offset(offset_parts)
+        return out_str
 
     def push_loop(self, dim: int) -> None:
         super().push_loop(dim)
-        self.start_offset_stack.append(self.current_offset)
+        #galaviel self.start_offset_stack.append(self.current_offset)
         self.dim_stack.append(dim)
 
+        # galaviel        
+        if isinstance(dim, str):
+            self.array_size_symbolic = True                     # if at least 1 DIM of 1 Reg is symbolic - the entire readback array size is symbolic
+            
+        # galaviel acc the offset inside the reg
+        if self.reg_offset_str != "":
+            self.reg_offset_str += "*"
+        self.reg_offset_str += str(dim)
+        
+
     def pop_loop(self) -> None:
-        start_offset = self.start_offset_stack.pop()
+        #galaviel start_offset = self.start_offset_stack.pop()
         dim = self.dim_stack.pop()
 
         # Number of registers enclosed in this loop
-        n_regs = self.current_offset - start_offset
+        # galaviel
+        if isinstance(dim, str):        
+            n_regs = dim
+        else:
+            # galaviel
+            if True:
+                n_regs = self.current_offset                    # make current_offset count only inside 1 loop (not accomulating)
+            else:
+                n_regs = self.current_offset - start_offset
         self.current_loop.n_regs = n_regs # type: ignore
 
         super().pop_loop()
-
-        # Advance current scope's offset to account for loop's contents
-        self.current_offset = start_offset + n_regs * dim
 
 
     def enter_Reg(self, node: RegNode) -> None:
         if not node.has_sw_readable:
             return
-
+        
         accesswidth = node.get_property('accesswidth')
         regwidth = node.get_property('regwidth')
         rbuf = node.get_property('buffer_reads')
@@ -100,6 +147,52 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
         else:
             self.process_reg(node)
 
+    # galaviel - when exiting reg, add its total #regs (mult all its dimentions) to the global/total
+    def exit_Reg(self, node: RegNode) -> None:
+        
+        # append local (current) reg -- Scalar
+        if self._loop_level == 0 and node.has_sw_readable:
+            print("Reg is not array - setting '1' to self.reg_offset_str " + str(node)) 
+            self.reg_offset_str     = "1"   # galaviel if not an array, add 1 ...
+        
+        #offset_parts.append("1")
+        
+        if self.reg_offset_str != "":
+            self.global_offset_arr.append(self.reg_offset_str)
+        print("Globl Offset before=" + self.global_offset_str)
+        if self.global_offset_str != "":
+            self.global_offset_str += "+"
+        self.global_offset_str += self.reg_offset_str
+        print("Globl Offset after =" + self.global_offset_str)
+        
+        # galaviel consolidate global offset accomulated thus far
+        # if it contains X + X then re-write that more nicely as 2*x
+        self.global_offset_str = self.consolidate_offset(self.global_offset_arr)
+        
+        # galaviel reset
+        self.reg_offset_str     = ""        # reset upon entry to each reg .. it's a pre-reg accomulator it's not global
+        
+        
+    def consolidate_offset(self, arr_in):
+        """
+        galaviel consolidate global offset accomulated thus far
+        if it contains X + X then re-write that more nicely as 2*x
+        """
+        from collections import Counter
+        c = Counter(arr_in)
+        str_out = ""
+        for value, num_occur in c.items():
+            if str_out != "":
+                str_out += "+"
+            if num_occur == 1:
+                str_out += "%s"    % value
+            elif value == "1":
+                str_out += "%d"    % num_occur
+            else:
+                str_out += "%d*%s" % (num_occur, value)
+        return str_out
+            
+            
 
     def process_reg(self, node: RegNode) -> None:
         current_bit = 0
@@ -127,7 +220,6 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
         if current_bit < bus_width:
             self.add_content(f"assign readback_array[{self.current_offset_str}][{bus_width-1}:{current_bit}] = '0;")
 
-        self.current_offset += 1
 
 
     def process_buffered_reg(self, node: RegNode, regwidth: int, accesswidth: int) -> None:

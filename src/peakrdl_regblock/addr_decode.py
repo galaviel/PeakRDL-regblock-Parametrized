@@ -98,9 +98,14 @@ class DecodeLogicGenerator(RDLForLoopGenerator):
         # Collect strides for each array dimension
         current_stride = node.array_stride
         strides = []
+        # galaviel
+        from systemrdl.ast.references import ParameterRef # galaviel
         for dim in reversed(node.array_dimensions):
             strides.append(current_stride)
-            current_stride *= dim
+            if isinstance(dim, ParameterRef):
+                current_stride = str(current_stride) + "*" + dim.param.name            # galaviel sub dim with symbolic
+            else:
+                current_stride *= dim
         strides.reverse()
         self._array_stride_stack.extend(strides)
 
@@ -108,7 +113,11 @@ class DecodeLogicGenerator(RDLForLoopGenerator):
     def _get_address_str(self, node:AddressableNode, subword_offset: int=0) -> str:
         a = f"'h{(node.raw_absolute_address - self.addr_decode.top_node.raw_absolute_address + subword_offset):x}"
         for i, stride in enumerate(self._array_stride_stack):
-            a += f" + i{i}*'h{stride:x}"
+            # galaviel
+            if isinstance(stride, int):
+                a += f" + i{i}*'h{stride:x}"
+            else:
+                a += f" + i{i}*{stride:s}"
         return a
 
 

@@ -15,7 +15,13 @@ class Body:
         s = '\n'.join((str(x) for x in self.children))
         return s
 
+
 class LoopBody(Body):
+    """
+    galaviel - this class has a bad name - it's not really the "loopBody" rather the entire loop.
+    the 'Body' class is the content of the assignmetns (not including the for(..) line
+    This class adds the 'for()' line to that.. very confusing.
+    """
     def __init__(self, dim: int, iterator: str, i_type: str) -> None:
         super().__init__()
         self.dim = dim
@@ -50,6 +56,12 @@ class ForLoopGenerator:
         self._loop_level += 1
 
     def add_content(self, s: str) -> None:
+        """
+        galaviel content == loop body
+        'content' seems to be the verilog assignments that are executed in the loop
+        note that it seems, reading the code here, in a mutli-level loop, each loop level can have 'content in addition to
+        sub-loops. 
+        """
         self.current_loop.children.append(s)
 
     def pop_loop(self) -> None:
@@ -86,7 +98,12 @@ class RDLForLoopGenerator(ForLoopGenerator, RDLListener):
             return
 
         for dim in node.array_dimensions:
-            self.push_loop(dim)
+            # galaviel
+            from systemrdl.ast.references import ParameterRef  # galaviel
+            if isinstance(dim, ParameterRef):
+                self.push_loop(dim.param.name)
+            else:
+                self.push_loop(dim)
 
     def exit_AddressableComponent(self, node: 'AddressableNode') -> None:
         if not node.is_array:
@@ -94,3 +111,6 @@ class RDLForLoopGenerator(ForLoopGenerator, RDLListener):
 
         for _ in node.array_dimensions:
             self.pop_loop()
+            
+        
+        

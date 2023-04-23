@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, Union, Optional
 from systemrdl.node import AddrmapNode, FieldNode, SignalNode, RegNode
 from systemrdl.rdltypes import PropertyReference
+from systemrdl.ast.references import ParameterRef   # galaviel
 
 if TYPE_CHECKING:
     from .exporter import RegblockExporter
@@ -32,7 +33,8 @@ class Dereferencer:
     def top_node(self) -> AddrmapNode:
         return self.exp.top_node
 
-    def get_value(self, obj: Union[int, FieldNode, SignalNode, PropertyReference]) -> str:
+    #def get_value(self, obj: Union[int, FieldNode, SignalNode, PropertyReference]) -> str:    # galaviel
+    def get_value(self, obj: Union[int, FieldNode, SignalNode, PropertyReference, ParameterRef]) -> str:
         """
         Returns the Verilog string that represents the readable value associated
         with the object.
@@ -77,6 +79,11 @@ class Dereferencer:
                 return self.get_reg_propref_value(obj.node, obj.name)
             else:
                 raise RuntimeError
+
+        # galaviel
+        if isinstance(obj, ParameterRef):
+            return obj.param.name
+
 
         raise RuntimeError(f"Unhandled reference to: {obj}")
 

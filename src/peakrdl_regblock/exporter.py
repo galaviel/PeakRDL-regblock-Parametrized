@@ -103,6 +103,13 @@ class RegblockExporter:
         address_width: int
             Override the CPU interface's address width. By default, address width
             is sized to the contents of the regblock.
+            
+        keep_params: list
+            do not emit error if reg 1D array and/or field reset value, if specified as an expression containing exactly 1 param (no arithmatic..)
+            are defined as RDL parameters but are not assigned actual value by the user.
+            In this case, emit RTL which is parametrized - the array dimension and field reset value expression will be the parameter name,
+            rather than some integer value.
+            list of string (parameter names) to emit as symbolic rather than integer.
         """
         # If it is the root node, skip to top addrmap
         if isinstance(node, RootNode):
@@ -115,6 +122,7 @@ class RegblockExporter:
         cpuif_cls = kwargs.pop("cpuif_cls", None) or APB4_Cpuif # type: Type[CpuifBase]
         module_name = kwargs.pop("module_name", None) or kwf(self.top_node.inst_name) # type: str
         package_name = kwargs.pop("package_name", None) or (module_name + "_pkg") # type: str
+        interface_name = kwargs.pop("package_name", None) or (module_name + "_if") # type: str
         reuse_hwif_typedefs = kwargs.pop("reuse_hwif_typedefs", True) # type: bool
         generate_hwif_report = kwargs.pop("generate_hwif_report", False) # type: bool
         user_addr_width = kwargs.pop("address_width", None) # type: Optional[int]
@@ -122,6 +130,7 @@ class RegblockExporter:
         # Pipelining options
         retime_read_fanin = kwargs.pop("retime_read_fanin", False) # type: bool
         retime_read_response = kwargs.pop("retime_read_response", True) # type: bool
+        keep_params = kwargs.pop("keep_params", False) # type: bool
 
         # Check for stray kwargs
         if kwargs:
@@ -160,10 +169,12 @@ class RegblockExporter:
         self.hwif = Hwif(
             self,
             package_name=package_name,
+            interface_name=interface_name,
             in_hier_signal_paths=scanner.in_hier_signal_paths,
             out_of_hier_signals=scanner.out_of_hier_signals,
             reuse_typedefs=reuse_hwif_typedefs,
             hwif_report_file=hwif_report_file,
+            keep_params=keep_params
         )
         self.readback = Readback(
             self,
@@ -194,15 +205,27 @@ class RegblockExporter:
             "min_read_latency": self.min_read_latency,
             "min_write_latency": self.min_write_latency,
             "kwf": kwf,
+            "keep_params": keep_params
         }
 
         # Write out design
         os.makedirs(output_dir, exist_ok=True)
-        package_file_path = os.path.join(output_dir, package_name + ".sv")
-        template = self.jj_env.get_template("package_tmpl.sv")
-        stream = template.stream(context)
-        stream.dump(package_file_path)
 
+        # package file
+        if not keep_params :
+            package_file_path = os.path.join(output_dir, package_name + ".sv")
+            template = self.jj_env.get_template("package_tmpl.sv")
+            stream = template.stream(context)
+            stream.dump(package_file_path)
+        
+        # package file
+        if ( keep_params ):
+            interface_file_path = os.path.join(output_dir, interface_name + ".sv")
+            template = self.jj_env.get_template("interface_tmpl.sv")
+            stream = template.stream(context)
+            stream.dump(interface_file_path)
+
+        # module file
         module_file_path = os.path.join(output_dir, module_name + ".sv")
         template = self.jj_env.get_template("module_tmpl.sv")
         stream = template.stream(context)

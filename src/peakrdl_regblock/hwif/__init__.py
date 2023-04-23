@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Union, Set, Dict, Optional, TextIO
+from typing import TYPE_CHECKING, Union, Set, Dict, Optional, TextIO, List
 
 from systemrdl.node import AddrmapNode, SignalNode, FieldNode, RegNode
 from systemrdl.rdltypes import PropertyReference
@@ -21,12 +21,14 @@ class Hwif:
     """
 
     def __init__(
-        self, exp: 'RegblockExporter', package_name: str,
+        self, exp: 'RegblockExporter', package_name: str, interface_name: str,
         in_hier_signal_paths: Set[str], out_of_hier_signals: Dict[str, SignalNode],
-        reuse_typedefs: bool, hwif_report_file: Optional[TextIO]
+        reuse_typedefs: bool, hwif_report_file: Optional[TextIO], keep_params: List[str]
     ):
         self.exp = exp
         self.package_name = package_name
+        self.interface_name = interface_name
+        
 
         self.has_input_struct = False
         self.has_output_struct = False
@@ -35,6 +37,8 @@ class Hwif:
         self.out_of_hier_signals = out_of_hier_signals
 
         self.hwif_report_file = hwif_report_file
+        
+        self.keep_params = keep_params
 
         if reuse_typedefs:
             self._gen_in_cls = InputStructGenerator_TypeScope
@@ -77,6 +81,36 @@ class Hwif:
             self.has_output_struct = False
 
         return "\n\n".join(lines)
+    
+    def get_interface_contents(self) -> str:
+        """
+        Same as get_package_contents() only for interface.
+        """
+        lines = []
+
+        gen_in = self._gen_in_cls(self)
+        structs_in = gen_in.get_struct(
+            self.top_node,
+            f"{self.top_node.inst_name}__in_t"
+        )
+        if structs_in is not None:
+            self.has_input_struct = True
+            lines.append(structs_in)
+        else:
+            self.has_input_struct = False
+
+        gen_out = self._gen_out_cls(self)
+        structs_out = gen_out.get_struct(
+            self.top_node,
+            f"{self.top_node.inst_name}__out_t"
+        )
+        if structs_out is not None:
+            self.has_output_struct = True
+            lines.append(structs_out)
+        else:
+            self.has_output_struct = False
+
+        return "\n\n".join(lines)    
 
 
     @property
@@ -91,12 +125,20 @@ class Hwif:
 
         lines = []
         if self.has_input_struct:
-            type_name = f"{self.top_node.inst_name}__in_t"
-            lines.append(f"input {self.package_name}::{type_name} hwif_in")
+            if self.keep_params:
+                type_name = f"{self.top_node.inst_name}_if.in"
+                lines.append(f"{type_name} hwif_in")
+            else:
+                type_name = f"{self.top_node.inst_name}_in_t"
+                lines.append(f"input {self.package_name}::{type_name} hwif_in")
         if self.has_output_struct:
-            type_name = f"{self.top_node.inst_name}__out_t"
-            lines.append(f"output {self.package_name}::{type_name} hwif_out")
-
+            if self.keep_params:
+                type_name = f"{self.top_node.inst_name}_if.out"
+                lines.append(f"{type_name} hwif_out")
+            else:
+                type_name = f"{self.top_node.inst_name}__out_t"
+                lines.append(f"output {self.package_name}::{type_name} hwif_out")
+                
         return ",\n".join(lines)
 
     #---------------------------------------------------------------------------
@@ -141,7 +183,11 @@ class Hwif:
                 return self.exp.dereferencer.get_value(next_value)
             # Otherwise, use inferred
             path = get_indexed_path(self.top_node, obj)
-            return "hwif_in." + path + ".next"
+            if self.keep_params:
+                return "hwif_in.in_struct." + path + ".next"
+                
+            else:
+                return "hwif_in." + path + ".next"
         elif isinstance(obj, SignalNode):
             if obj.get_path() in self.out_of_hier_signals:
                 return kwf(obj.inst_name)
@@ -174,7 +220,10 @@ class Hwif:
         """
         if isinstance(obj, FieldNode):
             path = get_indexed_path(self.top_node, obj)
-            return "hwif_out." + path + ".value"
+            if self.keep_params:
+                return "hwif_out.out_struct." + path + ".value"  # TODO galaviel probably can rewrte this to be more concise (not this bulky if/else)
+            else:
+                return "hwif_out." + path + ".value"
         elif isinstance(obj, PropertyReference):
             # TODO: this might be dead code.
             # not sure when anything would call this function with a prop ref

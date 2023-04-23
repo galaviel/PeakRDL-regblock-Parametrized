@@ -21,7 +21,17 @@ class HWIFStructGenerator(RDLFlatStructGenerator):
         super().push_struct(type_name, inst_name, array_dimensions)
 
         if array_dimensions:
-            array_suffix = "".join([f"[0:{dim-1}]" for dim in array_dimensions])
+            #galaviel
+            from systemrdl.ast.references import ParameterRef   # galaviel
+            mda = []
+            for dim in array_dimensions:
+                if isinstance(dim, ParameterRef):
+                    dim_str = "[" + dim.param.name +"]"
+                else:
+                    dim_str = f"[0:{dim-1}]"
+                mda.append(dim_str)
+            array_suffix = "".join(mda)
+            #array_suffix = "".join([f"[0:{dim-1}]" for dim in array_dimensions])    # galaviel old
             segment = inst_name + array_suffix
         else:
             segment = inst_name
