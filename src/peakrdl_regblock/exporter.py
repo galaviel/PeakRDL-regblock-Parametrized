@@ -172,6 +172,7 @@ class RegblockExporter:
             interface_name=interface_name,
             in_hier_signal_paths=scanner.in_hier_signal_paths,
             out_of_hier_signals=scanner.out_of_hier_signals,
+            user_enums=scanner.user_enums,
             reuse_typedefs=reuse_hwif_typedefs,
             hwif_report_file=hwif_report_file,
             keep_params=keep_params
