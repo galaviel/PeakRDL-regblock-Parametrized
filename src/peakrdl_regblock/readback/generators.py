@@ -202,8 +202,8 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
                 continue
 
             # insert reserved assignment before this field if needed
-            if current_bit == 0 and (not isinstance(field.low, ParameterRef)):         # galaviel can't tell if this is needed in case field.low is symbolic.. it might be 0..
-                if field.low != current_bit:
+            if current_bit == 0 and (not isinstance(field.low, ParameterRef)):          # galaviel can't tell if this is needed in case field.low is symbolic.. it might be 0..
+                if field.low != current_bit:                                            # TODO galaviel replace assign with blocking assignment, first assign entire reg to zero, only then over-ride existing fields. Same effect.
                     self.add_content(f"assign readback_array[{self.current_offset_str}][{field.low-1}:{current_bit}] = '0;")
 
             value = self.exp.dereferencer.get_value(field)

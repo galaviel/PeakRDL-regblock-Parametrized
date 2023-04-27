@@ -22,9 +22,15 @@ class Readback:
         array_assignments = gen.get_content(self.top_node)
         
         # galaviel
-        #array_size = gen.current_offset
-        array_size = gen.global_offset_str
-        array_size_symbolic = gen.array_size_symbolic 
+        # if not symbolic, try to convert the passed string 'gen.global_offset_str' to integer
+        array_size_symbolic = gen.array_size_symbolic
+        if not array_size_symbolic:
+            try:
+                array_size = int(gen.global_offset_str)
+            except:
+                array_size = gen.global_offset_str
+        
+         
 
         # Enabling the fanin stage doesnt make sense if readback fanin is
         # small. This also avoids pesky corner cases
