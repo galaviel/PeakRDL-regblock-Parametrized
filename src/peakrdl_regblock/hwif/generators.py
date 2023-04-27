@@ -45,10 +45,13 @@ class HWIFStructGenerator(RDLFlatStructGenerator):
     def add_member(self, name: str, width: int = 1) -> None: # type: ignore # pylint: disable=arguments-differ
         super().add_member(name, width)
 
-        if width > 1:
-            suffix = f"[{width-1}:0]"
+        if isinstance(width, str):
+            suffix = f"logic [{width}-1:0]"  # galaviel if msb or lsb are symbolic, then width is too; treat it like a string
         else:
-            suffix = ""
+            if width > 1:
+                suffix = f"[{width-1}:0]"
+            else:
+                suffix = ""
 
         path = ".".join(self.hwif_report_stack)
         if self.hwif.hwif_report_file:

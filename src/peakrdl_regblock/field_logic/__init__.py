@@ -70,7 +70,21 @@ class FieldLogic:
         assert field.implements_storage
         path = get_indexed_path(self.top_node, field)
         return f"field_storage.{path}.value"
-
+    
+    def get_storage_msbit(self, field: 'FieldNode') -> str:
+        """
+        Returns the Verilog string that represents the msbit of the storage element. (lsbit is set to 0
+        in my limited trial).
+        Needed in case 'width' is symbolic (due to msb/lsb being a ParamterRef rather than just an int).
+        So do the -1 either arithmatically or as string concat.
+        """
+        assert field.implements_storage
+        if isinstance(field.width, str):
+            return field.width + "-1"
+        else:
+            return str(field.width-1)
+    
+    
     def get_next_q_identifier(self, field: 'FieldNode') -> str:
         """
         Returns the Verilog string that represents the storage register element

@@ -7,6 +7,8 @@ from ..forloop_generator import RDLForLoopGenerator, LoopBody
 if TYPE_CHECKING:
     from ..exporter import RegblockExporter
 
+from systemrdl.ast.references import ParameterRef  # galaviel
+
 class ReadbackLoopBody(LoopBody):
     """
     galaviel this just adds the search & replace of each dim size.
@@ -200,22 +202,39 @@ class ReadbackAssignmentGenerator(RDLForLoopGenerator):
                 continue
 
             # insert reserved assignment before this field if needed
-            if field.low != current_bit:
-                self.add_content(f"assign readback_array[{self.current_offset_str}][{field.low-1}:{current_bit}] = '0;")
+            if current_bit == 0 and (not isinstance(field.low, ParameterRef)):         # galaviel can't tell if this is needed in case field.low is symbolic.. it might be 0..
+                if field.low != current_bit:
+                    self.add_content(f"assign readback_array[{self.current_offset_str}][{field.low-1}:{current_bit}] = '0;")
 
             value = self.exp.dereferencer.get_value(field)
-            if field.msb < field.lsb:
+            
+            if isinstance(field.msb, ParameterRef) or isinstance(field.lsb, ParameterRef):      # galaviel keep it simple.. for now..dont support bitswap (anyways can't tell if symbolic)
+                pass            
+            elif field.msb < field.lsb:
                 # Field gets bitswapped since it is in [low:high] orientation
                 value = f"{{<<{{{value}}}}}"
+            
+            if isinstance(field.high, ParameterRef):    # galaviel ugly .. need self.field_high_str .. 
+                field_high = field.high.param.name
+            else:
+                field_high = field.high
+            if isinstance(field.low, ParameterRef):    # galaviel ugly .. need self.field_low_str .. 
+                field_low = field.low.param.name
+            else:
+                field_low = field.low
+                
+            self.add_content(f"assign readback_array[{self.current_offset_str}][{field_high}:{field_low}] = {rd_strb} ? {value} : '0;")
 
-            self.add_content(f"assign readback_array[{self.current_offset_str}][{field.high}:{field.low}] = {rd_strb} ? {value} : '0;")
-
-            current_bit = field.high + 1
+            if ( isinstance(field.high, ParameterRef)): # galaviel
+                current_bit = field.high.param.name + "1"
+            else:
+                current_bit = field.high + 1
 
         # Insert final reserved assignment if needed
         bus_width = self.exp.cpuif.data_width
-        if current_bit < bus_width:
-            self.add_content(f"assign readback_array[{self.current_offset_str}][{bus_width-1}:{current_bit}] = '0;")
+        if not isinstance(current_bit, str):        # galaviel one of the bit ranges is symbolic, we can't know if below is required.. so keep it simple: always assume all regs fit into teh bus width
+            if current_bit < bus_width:
+                self.add_content(f"assign readback_array[{self.current_offset_str}][{bus_width-1}:{current_bit}] = '0;")
 
 
 

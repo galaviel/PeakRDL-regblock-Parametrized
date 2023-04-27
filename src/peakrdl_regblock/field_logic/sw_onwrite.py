@@ -3,9 +3,13 @@ from typing import TYPE_CHECKING, List
 from systemrdl.rdltypes import OnWriteType
 
 from .bases import NextStateConditional
+from _ast import Param
+from email._header_value_parser import Parameter
 
 if TYPE_CHECKING:
     from systemrdl.node import FieldNode
+    
+from systemrdl.ast.references import ParameterRef  # galaviel    
 
 # TODO: implement sw=w1 "write once" fields
 
@@ -38,6 +42,22 @@ class _OnWrite(NextStateConditional):
 
     def _wbus_bitslice(self, field: 'FieldNode', subword_idx: int = 0) -> str:
         # Get the source bitslice range from the internal cpuif's data bus
+        
+        # galaviel - provisory
+        is_param = False
+        if isinstance(field.low, ParameterRef):
+            low = field.low.param.name
+            is_param = True
+        else:
+            low = field.low
+        if isinstance(field.high, ParameterRef):
+            high = field.high.param.name
+            is_param = True
+        else:
+            high = field.high
+        if is_param:
+            return f"[{high}:{low}]"
+            
         if field.parent.get_property('buffer_writes'):
             # register is buffered.
             # write buffer is the full width of the register. no need to deal with subwords
@@ -87,8 +107,10 @@ class _OnWrite(NextStateConditional):
         else:
             # Regular non-buffered register
             bslice = self._wbus_bitslice(field, subword_idx)
-
-            if field.msb < field.lsb:
+            
+            if isinstance(field.msb, ParameterRef) or isinstance(field.lsb, ParameterRef):      # galaviel simple.. for now
+                 value = "decoded_wr_data" + bslice
+            elif field.msb < field.lsb:
                 # Field gets bitswapped since it is in [low:high] orientation
                 value = "decoded_wr_data_bswap" + bslice
             else:
@@ -107,7 +129,9 @@ class _OnWrite(NextStateConditional):
             # Regular non-buffered register
             bslice = self._wbus_bitslice(field, subword_idx)
 
-            if field.msb < field.lsb:
+            if isinstance(field.msb, ParameterRef) or isinstance(field.lsb, ParameterRef):      # galaviel simple.. for now
+                value = "decoded_wr_biten" + bslice
+            elif field.msb < field.lsb:
                 # Field gets bitswapped since it is in [low:high] orientation
                 value = "decoded_wr_biten_bswap" + bslice
             else:

@@ -100,7 +100,10 @@ class StructGenerator:
         if width == 1:
             m = f"logic {name}{suffix};"
         else:
-            m = f"logic [{width-1}:0] {name}{suffix};"
+            if isinstance(width, str):
+                m = f"logic [{width}-1:0] {name}{suffix};"  # galaviel if msb or lsb are symbolic, then width is too; treat it like a string
+            else:
+                m = f"logic [{width-1}:0] {name}{suffix};"                
         self.current_struct.children.append(m)
 
 

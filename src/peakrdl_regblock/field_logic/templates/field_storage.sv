@@ -1,7 +1,7 @@
 {%- import 'field_logic/templates/counter_macros.sv' as counter_macros with context -%}
 // Field: {{node.get_path()}}
 always_comb begin
-    automatic logic [{{node.width-1}}:0] next_c = {{field_logic.get_storage_identifier(node)}};
+	automatic logic [{{field_logic.get_storage_msbit(node)}}:0] next_c = {{field_logic.get_storage_identifier(node)}};
     automatic logic load_next_c = '0;
     {%- for signal in extra_combo_signals %}
     {{field_logic.get_field_combo_identifier(node, signal.name)}} = {{signal.default_assignment}};

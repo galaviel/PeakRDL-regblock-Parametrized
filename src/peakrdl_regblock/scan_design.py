@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from .exporter import RegblockExporter
     from systemrdl.rdltypes import UserEnum
 
+from systemrdl.ast.references import ParameterRef  # galaviel
 
 class DesignScanner(RDLListener):
     """
@@ -107,5 +108,7 @@ class DesignScanner(RDLListener):
             self.in_hier_signal_paths.add(path)
 
     def enter_Field(self, node: 'FieldNode') -> None:
+        if isinstance(node.msb, ParameterRef) or isinstance(node.lsb, ParameterRef):
+            return    # galaviel skip if symbolic.. cannot know
         if node.is_sw_writable and (node.msb < node.lsb):
             self.has_writable_msb0_fields = True

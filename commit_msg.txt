@@ -1,0 +1,5 @@
+Adding limited parametrized output support for regblock.
+most mess I've done is in 'readback/generators.py', rest is not so bad.
+Perhaps need to clean it a bit. 
+I replaced the original logic with mine. Probably need to merge. Proably because I didn't 100% 
+understand the original logic.
