@@ -29,6 +29,8 @@ class Readback:
                 array_size = int(gen.global_offset_str)
             except:
                 array_size = gen.global_offset_str
+        else:
+            array_size = gen.global_offset_str
         
          
 

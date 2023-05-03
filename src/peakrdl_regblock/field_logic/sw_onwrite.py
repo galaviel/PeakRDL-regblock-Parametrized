@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, List
 from systemrdl.rdltypes import OnWriteType
 
 from .bases import NextStateConditional
-from _ast import Param
+
 from email._header_value_parser import Parameter
 
 if TYPE_CHECKING:
