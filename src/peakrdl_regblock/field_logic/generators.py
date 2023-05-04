@@ -59,6 +59,26 @@ class CombinationalStructGenerator(RDLStructGenerator):
             self.add_member('decrsaturate')
         else:
             self.add_member('underflow')
+            
+class CombinationalParityStructGenerator(RDLStructGenerator):
+    """
+    galaviel same as 'CombinationalStructGenerator' only for parity.
+    Much simpler, I've deleted most of the copied code.
+    """
+
+    def __init__(self, field_logic: 'FieldLogic'):
+        super().__init__()
+        self.field_logic = field_logic
+
+
+    def enter_Field(self, node: 'FieldNode') -> None:
+        # If a field doesn't implement parity, it is not relevant here
+        if not node.implements_parity:
+            return
+
+        self.push_struct(kwf(node.inst_name))
+        self.add_member("parity_error")
+        self.pop_struct()
 
 
 class FieldStorageStructGenerator(RDLStructGenerator):
@@ -75,6 +95,20 @@ class FieldStorageStructGenerator(RDLStructGenerator):
 
         if self.field_logic.has_next_q(node):
             self.add_member("next_q", node.width)
+
+        self.pop_struct()
+
+class FieldParityStorageStructGenerator(RDLStructGenerator):
+
+    def __init__(self, field_logic: 'FieldLogic') -> None:
+        super().__init__()
+        self.field_logic = field_logic
+
+    def enter_Field(self, node: 'FieldNode') -> None:
+        self.push_struct(kwf(node.inst_name))
+
+        if node.implements_parity:
+            self.add_member("parity", node.width)
 
         self.pop_struct()
 
@@ -193,6 +227,8 @@ class FieldLogicGenerator(RDLForLoopGenerator):
             'get_input_identifier': self.exp.hwif.get_input_identifier,
         }
         self.add_content(self.field_storage_template.render(context))
+        
+
 
 
     def assign_field_outputs(self, node: 'FieldNode') -> None:

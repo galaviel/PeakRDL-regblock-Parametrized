@@ -84,6 +84,8 @@ class StructGenerator:
 
 
     def add_member(self, name: str, width: int = 1, array_dimensions: Optional[List[int]] = None) -> None:
+        
+        # Suffix
         if array_dimensions:
             # galaviel
             mda = []
@@ -96,7 +98,16 @@ class StructGenerator:
             suffix = "[" + "][".join(mda) + "]"
         else:
             suffix = ""
-
+            
+        # parity
+        #  no suffix (even if field is multi-bit, also parity is always single bit per field, so over-ride
+        # whatever original 'width' to 1
+        # TODO galaviel must be a more elegant way than to hard-code compare name=="parity".. 
+        if name == "parity":
+            suffix = ""
+            width = 1;
+            
+        # Width
         if width == 1:
             m = f"logic {name}{suffix};"
         else:
@@ -104,6 +115,8 @@ class StructGenerator:
                 m = f"logic [{width}-1:0] {name}{suffix};"  # galaviel if msb or lsb are symbolic, then width is too; treat it like a string
             else:
                 m = f"logic [{width-1}:0] {name}{suffix};"                
+        
+        # Append
         self.current_struct.children.append(m)
 
 

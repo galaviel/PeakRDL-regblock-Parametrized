@@ -134,10 +134,16 @@ module {{module_name}}
     // Field logic
     //--------------------------------------------------------------------------
     {{field_logic.get_combo_struct()|indent}}
+    
+    {{field_logic.get_parity_combo_struct()|indent}}
 
     {{field_logic.get_storage_struct()|indent}}
+    
+    {{field_logic.get_parity_storage_struct()|indent}}
 
     {{field_logic.get_implementation()|indent}}
+    
+    
 
 {%- if has_buffered_read_regs %}
 
@@ -155,6 +161,15 @@ module {{module_name}}
     logic readback_done;
     logic [{{cpuif.data_width-1}}:0] readback_data;
     {{readback.get_implementation()|indent}}
+    
+    //--------------------------------------------------------------------------
+    // Parity Error
+    //--------------------------------------------------------------------------
+    logic parity_error_int;
+    logic readback_done;
+    logic [{{cpuif.data_width-1}}:0] readback_data;
+    {{readback.get_implementation()|indent}}
+
 {% if retime_read_response %}
     always_ff {{get_always_ff_event(cpuif.reset)}} begin
         if({{get_resetsignal(cpuif.reset)}}) begin

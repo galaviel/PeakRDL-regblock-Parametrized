@@ -12,7 +12,7 @@ from . import hw_interrupts
 
 from ..utils import get_indexed_path
 
-from .generators import CombinationalStructGenerator, FieldStorageStructGenerator, FieldLogicGenerator
+from .generators import CombinationalStructGenerator, CombinationalParityStructGenerator, FieldStorageStructGenerator, FieldParityStorageStructGenerator, FieldLogicGenerator
 
 if TYPE_CHECKING:
     from typing import Dict, List
@@ -41,6 +41,16 @@ class FieldLogic:
             return ""
 
         return s + "\nfield_storage_t field_storage;"
+    
+    def get_parity_storage_struct(self) -> str:
+        struct_gen = FieldParityStorageStructGenerator(self)
+        s = struct_gen.get_struct(self.top_node, "field_parity_storage_t")
+
+        # Only declare the parity_storage struct if it exists
+        if s is None:
+            return ""
+
+        return s + "\nfield_parity_storage_t field_parity_storage;"    
 
     def get_combo_struct(self) -> str:
         struct_gen = CombinationalStructGenerator(self)
@@ -51,6 +61,16 @@ class FieldLogic:
             return ""
 
         return s + "\nfield_combo_t field_combo;"
+
+    def get_parity_combo_struct(self) -> str:
+        struct_gen = CombinationalParityStructGenerator(self)
+        s = struct_gen.get_struct(self.top_node, "field_parity_combo_t")
+
+        # Only declare the storage struct if it exists
+        if s is None:
+            return ""
+
+        return s + "\nfield_parity_combo_t field_parity_combo;"
 
     def get_implementation(self) -> str:
         gen = FieldLogicGenerator(self)
@@ -70,6 +90,14 @@ class FieldLogic:
         assert field.implements_storage
         path = get_indexed_path(self.top_node, field)
         return f"field_storage.{path}.value"
+
+    def get_parity_storage_identifier(self, field: 'FieldNode') -> str:
+        """
+        same as get_storage_identifier() only for parity
+        """
+        assert field.implements_parity
+        path = get_indexed_path(self.top_node, field)
+        return f"field_parity_storage.{path}.parity"
     
     def get_storage_msbit(self, field: 'FieldNode') -> str:
         """
@@ -102,6 +130,15 @@ class FieldLogic:
         assert field.implements_storage
         path = get_indexed_path(self.top_node, field)
         return f"field_combo.{path}.{name}"
+
+    def get_field_parity_combo_identifier(self, field: 'FieldNode', name: str) -> str:
+        """
+        Returns a Verilog string that represents a field's internal combinational
+        signal. 
+        """
+        assert field.implements_storage
+        path = get_indexed_path(self.top_node, field)
+        return f"field_parity_combo.{path}.{name}"
 
     def get_counter_incr_strobe(self, field: 'FieldNode') -> str:
         """
