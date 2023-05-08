@@ -30,6 +30,10 @@ module {{module_name}}
         {%- if hwif.has_input_struct or hwif.has_output_struct %},{% endif %}
 
         {{hwif.port_declaration|indent(8)}}
+        
+        {%- if parity.implements_parity %},
+        output logic parity_error
+        {% endif %}
     );
 
     //--------------------------------------------------------------------------
@@ -162,14 +166,6 @@ module {{module_name}}
     logic [{{cpuif.data_width-1}}:0] readback_data;
     {{readback.get_implementation()|indent}}
     
-    //--------------------------------------------------------------------------
-    // Parity Error
-    //--------------------------------------------------------------------------
-    logic parity_error_int;
-    logic readback_done;
-    logic [{{cpuif.data_width-1}}:0] readback_data;
-    {{readback.get_implementation()|indent}}
-
 {% if retime_read_response %}
     always_ff {{get_always_ff_event(cpuif.reset)}} begin
         if({{get_resetsignal(cpuif.reset)}}) begin
@@ -187,4 +183,10 @@ module {{module_name}}
     assign cpuif_rd_data = readback_data;
     assign cpuif_rd_err = readback_err;
 {%- endif %}
+
+    //--------------------------------------------------------------------------
+    // Parity
+    //--------------------------------------------------------------------------
+    {{parity.get_implementation()|indent}}
+
 endmodule

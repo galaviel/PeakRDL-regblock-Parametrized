@@ -131,13 +131,14 @@ class FieldLogic:
         path = get_indexed_path(self.top_node, field)
         return f"field_combo.{path}.{name}"
 
-    def get_field_parity_combo_identifier(self, field: 'FieldNode', name: str) -> str:
+    def get_field_parity_combo_identifier(self, field: 'FieldNode') -> str:
         """
         Returns a Verilog string that represents a field's internal combinational
-        signal. 
+        signal.
         """
         assert field.implements_storage
         path = get_indexed_path(self.top_node, field)
+        name = "parity_error"                                               # galaviel keep this constant, don't see any reason to allow overriding this from the calling env.
         return f"field_parity_combo.{path}.{name}"
 
     def get_counter_incr_strobe(self, field: 'FieldNode') -> str:

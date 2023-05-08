@@ -22,7 +22,7 @@ always_comb begin
     {{field_logic.get_field_combo_identifier(node, "next")}} = next_c;
     {{field_logic.get_field_combo_identifier(node, "load_next")}} = load_next_c;
     {%- if node.implements_parity %}
-    {{field_logic.get_field_parity_combo_identifier(node, "parity_error")}} = ({{field_logic.get_parity_storage_identifier(node)}} != ^{{field_logic.get_storage_identifier(node)}}};
+    {{field_logic.get_field_parity_combo_identifier(node)}} = ({{field_logic.get_parity_storage_identifier(node)}} != ^{{field_logic.get_storage_identifier(node)}}};
     {%- endif %}
 end
 always_ff {{get_always_ff_event(resetsignal)}} begin
@@ -37,11 +37,12 @@ always_ff {{get_always_ff_event(resetsignal)}} begin
     {%- endif %}
 end
 
+// Parity Bit Storage
 {%- if node.implements_parity %}
 always_ff {{get_always_ff_event(resetsignal)}} begin
     {% if reset is not none -%}
     if({{get_resetsignal(resetsignal)}}) begin
-        {{field_logic.get_parity_storage_identifier(node)}} <= ^{{reset}};
+        {{field_logic.get_parity_storage_identifier(node)}} <= ^{% raw -%}{{%- endraw %}{{reset}}{% raw -%}}{%- endraw %};  {# galaviel lookfor easier ways than raw/endraw to esacpae the {} #}
     end else {% endif %}if({{field_logic.get_field_combo_identifier(node, "load_next")}}) begin
         {{field_logic.get_parity_storage_identifier(node)}} <= ^{{field_logic.get_field_combo_identifier(node, "next")}};
     end
@@ -50,3 +51,5 @@ always_ff {{get_always_ff_event(resetsignal)}} begin
     {%- endif %}
 end
 {%- endif %}
+
+

@@ -8,6 +8,7 @@ from .addr_decode import AddressDecode
 from .field_logic import FieldLogic
 from .dereferencer import Dereferencer
 from .readback import Readback
+from .parity import Parity
 from .identifier_filter import kw_filter as kwf
 
 from .utils import get_always_ff_event
@@ -32,6 +33,7 @@ class RegblockExporter:
         self.address_decode = AddressDecode(self)
         self.field_logic = FieldLogic(self)
         self.readback = None # type: Readback
+        self.parity = None # type: Parity
         self.write_buffering = WriteBuffering(self)
         self.read_buffering = ReadBuffering(self)
         self.dereferencer = Dereferencer(self)
@@ -181,6 +183,10 @@ class RegblockExporter:
             self,
             retime_read_fanin
         )
+        
+        self.parity= Parity(
+            self, False
+        )
 
         # Validate that there are no unsupported constructs
         validator = DesignValidator(self)
@@ -201,6 +207,7 @@ class RegblockExporter:
             "address_decode": self.address_decode,
             "field_logic": self.field_logic,
             "readback": self.readback,
+            "parity": self.parity,
             "get_always_ff_event": lambda resetsignal : get_always_ff_event(self.dereferencer, resetsignal),
             "retime_read_response": retime_read_response,
             "min_read_latency": self.min_read_latency,
